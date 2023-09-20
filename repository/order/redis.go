@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/alph0n5e/orders-api/model"
@@ -15,7 +16,7 @@ type RedisRepo struct {
 	Client *redis.Client
 }
 
-type FinAllPage struct {
+type FindAllPage struct {
 	Size   uint64
 	Offset uint64
 }
@@ -25,8 +26,8 @@ type FindResult struct {
 	Cursor uint64
 }
 
-func orderIDKey(id uint64) string {
-	return fmt.Sprintf("order:%d", id)
+func orderIDKey(id uuid.UUID) string {
+	return fmt.Sprintf("order:%s", id)
 }
 
 var ErrNotExist = errors.New("order does not exist")
@@ -58,7 +59,7 @@ func (r *RedisRepo) Insert(ctx context.Context, order model.Order) error {
 	return nil
 }
 
-func (r *RedisRepo) FindById(ctx context.Context, id uint64) (model.Order, error) {
+func (r *RedisRepo) FindById(ctx context.Context, id uuid.UUID) (model.Order, error) {
 	key := orderIDKey(id)
 
 	value, err := r.Client.Get(ctx, key).Result()
@@ -77,7 +78,7 @@ func (r *RedisRepo) FindById(ctx context.Context, id uint64) (model.Order, error
 	return order, nil
 }
 
-func (r *RedisRepo) DeleteById(ctx context.Context, id uint64) error {
+func (r *RedisRepo) DeleteById(ctx context.Context, id uuid.UUID) error {
 	key := orderIDKey(id)
 
 	txn := r.Client.TxPipeline()
@@ -121,7 +122,7 @@ func (r *RedisRepo) Update(ctx context.Context, order model.Order) error {
 	return nil
 }
 
-func (r *RedisRepo) FindAll(ctx context.Context, page FinAllPage) (FindResult, error) {
+func (r *RedisRepo) FindAll(ctx context.Context, page FindAllPage) (FindResult, error) {
 	res := r.Client.SScan(ctx, "orders", page.Offset, "*", int64(page.Size))
 
 	keys, cursor, err := res.Result()
